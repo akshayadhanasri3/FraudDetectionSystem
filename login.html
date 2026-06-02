@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FraudShield — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #050810;
+    --surface: #0d1117;
+    --border: #1e2a3a;
+    --accent: #3b82f6;
+    --accent2: #6366f1;
+    --danger: #ef4444;
+    --success: #10b981;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --card: #0a0f1a;
+  }
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Animated background */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .bg-glow {
+    position: fixed; z-index: 0;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    animation: drift 8s ease-in-out infinite alternate;
+  }
+  .bg-glow.a { background: #3b82f6; top: -200px; left: -100px; }
+  .bg-glow.b { background: #6366f1; bottom: -200px; right: -100px; animation-delay: -4s; }
+  @keyframes drift { from { transform: translate(0,0); } to { transform: translate(40px, 30px); } }
+
+  /* Card */
+  .card {
+    position: relative; z-index: 10;
+    width: 440px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 48px;
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.08), 0 32px 64px rgba(0,0,0,0.5);
+    animation: slideUp 0.6s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes slideUp { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: translateY(0); } }
+
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 32px;
+  }
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo-text span { color: var(--accent); }
+
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+
+  .field { margin-bottom: 20px; }
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
+  input {
+    width: 100%; padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+  input::placeholder { color: var(--muted); }
+
+  .field-row { display: flex; gap: 12px; align-items: center; }
+  .forgot { color: var(--accent); font-size: 13px; text-decoration: none; font-weight: 500; white-space: nowrap; }
+  .forgot:hover { text-decoration: underline; }
+
+  .btn {
+    width: 100%; padding: 14px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #fff;
+    border: none; border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: opacity 0.2s, transform 0.1s;
+    position: relative; overflow: hidden;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn .spinner {
+    display: none; width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .divider { text-align: center; color: var(--muted); font-size: 13px; margin: 24px 0; position: relative; }
+  .divider::before, .divider::after {
+    content: ''; position: absolute; top: 50%; width: 40%; height: 1px;
+    background: var(--border);
+  }
+  .divider::before { left: 0; }
+  .divider::after { right: 0; }
+
+  .link-row { text-align: center; color: var(--muted); font-size: 14px; }
+  .link-row a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .link-row a:hover { text-decoration: underline; }
+
+  .toast {
+    display: none; padding: 12px 16px;
+    border-radius: 8px; font-size: 14px;
+    margin-bottom: 20px; font-weight: 500;
+  }
+  .toast.error { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; display: block; }
+  .toast.success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; display: block; }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🛡️</div>
+    <div class="logo-text">Fraud<span>Shield</span></div>
+  </div>
+
+  <h1>Welcome back</h1>
+  <p class="subtitle">Sign in to your secure dashboard</p>
+
+  <div id="toast" class="toast"></div>
+
+  <div class="field">
+    <label>Email Address</label>
+    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+  </div>
+
+  <div class="field">
+    <label>Password</label>
+    <div class="field-row">
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" style="flex:1">
+    </div>
+    <div style="text-align:right; margin-top:8px">
+      <a class="forgot" href="/forgot-password">Forgot password?</a>
+    </div>
+  </div>
+
+  <button class="btn" id="loginBtn" onclick="doLogin()">
+    <span id="btnText">Sign In</span>
+    <div class="spinner" id="spinner"></div>
+  </button>
+
+  <div class="divider">or</div>
+
+  <div class="link-row">
+    Don't have an account? <a href="/signup">Create account</a>
+  </div>
+</div>
+
+<script>
+async function doLogin() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('loginBtn');
+  const toast = document.getElementById('toast');
+
+  if (!email || !password) return showToast('Please fill in all fields', 'error');
+
+  setLoading(true);
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast(data.detail || 'Login failed', 'error');
+
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    showToast('Login successful! Redirecting...', 'success');
+    setTimeout(() => window.location.href = '/dashboard', 1000);
+  } catch (e) {
+    showToast('Network error. Is the server running?', 'error');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type;
+}
+
+function setLoading(v) {
+  document.getElementById('loginBtn').disabled = v;
+  document.getElementById('btnText').style.display = v ? 'none' : 'block';
+  document.getElementById('spinner').style.display = v ? 'block' : 'none';
+}
+
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+</script>
+</body>
+</html>

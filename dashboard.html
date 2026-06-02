@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FraudShield — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #050810; --surface: #0d1117; --surface2: #111827;
+  --border: #1e2a3a; --accent: #3b82f6; --accent2: #6366f1;
+  --text: #e2e8f0; --muted: #64748b; --card: #0a0f1a;
+  --success: #10b981; --danger: #ef4444; --warn: #f59e0b;
+  --sidebar: 240px;
+}
+body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: var(--sidebar); background: var(--card);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; height: 100vh;
+  z-index: 100; padding: 24px 0;
+}
+.sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 28px; border-bottom: 1px solid var(--border); }
+.logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg,#3b82f6,#6366f1); border-radius: 9px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+.logo-text { font-size: 18px; font-weight: 700; }
+.logo-text span { color: var(--accent); }
+
+.nav { padding: 20px 12px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: 10px;
+  color: var(--muted); font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s; margin-bottom: 4px;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--surface); color: var(--text); }
+.nav-item.active { background: rgba(59,130,246,0.12); color: var(--accent); }
+.nav-item .nav-icon { font-size: 18px; width: 22px; text-align: center; }
+
+.sidebar-user { padding: 16px 20px; border-top: 1px solid var(--border); }
+.user-info { display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 36px; height: 36px; background: linear-gradient(135deg,#6366f1,#3b82f6); border-radius: 50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; }
+.user-name { font-size: 14px; font-weight: 600; }
+.user-email { font-size: 12px; color: var(--muted); }
+.logout-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; margin-left: auto; }
+.logout-btn:hover { color: var(--danger); }
+
+/* Main */
+.main { margin-left: var(--sidebar); flex: 1; display: flex; flex-direction: column; }
+.topbar { padding: 20px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--card); position: sticky; top:0; z-index:50; }
+.topbar-title { font-size: 20px; font-weight: 700; }
+.topbar-sub { font-size: 13px; color: var(--muted); }
+.refresh-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 13px; cursor: pointer; }
+.refresh-btn:hover { border-color: var(--accent); }
+
+.content { padding: 28px; flex: 1; }
+
+/* Section visibility */
+.section { display: none; }
+.section.active { display: block; }
+
+/* Stats grid */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 20px 24px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.stat-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-2px); }
+.stat-label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.stat-value { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+.stat-value.blue { color: var(--accent); }
+.stat-value.red { color: var(--danger); }
+.stat-value.green { color: var(--success); }
+.stat-value.amber { color: var(--warn); }
+.stat-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+/* Cards */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.card-title { font-size: 16px; font-weight: 700; }
+.card-sub { font-size: 13px; color: var(--muted); }
+
+/* Charts */
+.charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+/* Transaction Form */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.field { margin-bottom: 0; }
+.field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 7px; letter-spacing: 0.5px; text-transform: uppercase; }
+.field input, .field select {
+  width: 100%; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; color: var(--text);
+  font-family: 'Space Grotesk', sans-serif; font-size: 14px; outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+.field select option { background: var(--surface); }
+.analyze-btn {
+  padding: 13px 28px; background: linear-gradient(135deg,#3b82f6,#6366f1);
+  color:#fff; border:none; border-radius:9px;
+  font-family:'Space Grotesk',sans-serif; font-size:14px; font-weight:600;
+  cursor:pointer; transition:opacity 0.2s;
+}
+.analyze-btn:hover { opacity: 0.9; }
+.analyze-btn:disabled { opacity: 0.5; }
+
+/* Result card */
+.result-box {
+  display: none; margin-top: 20px;
+  border-radius: 12px; padding: 20px 24px;
+  border: 1px solid;
+  animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.result-box.safe { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.3); }
+.result-box.review { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.3); }
+.result-box.fraud { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
+.result-title { font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+.result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.result-item .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.result-item .value { font-size: 18px; font-weight: 700; font-family:'JetBrains Mono',monospace; }
+
+/* Risk meter */
+.risk-bar { height: 8px; background: var(--border); border-radius: 4px; margin: 16px 0 4px; overflow: hidden; }
+.risk-fill { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(.16,1,.3,1); }
+.risk-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
+
+/* Table */
+.txn-table { width: 100%; border-collapse: collapse; }
+.txn-table th { text-align: left; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 12px 12px; }
+.txn-table td { padding: 12px; border-top: 1px solid var(--border); font-size: 14px; }
+.txn-table tr:hover td { background: rgba(59,130,246,0.03); }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge.safe { background: rgba(16,185,129,0.12); color: #6ee7b7; }
+.badge.fraud { background: rgba(239,68,68,0.12); color: #fca5a5; }
+.badge.review { background: rgba(245,158,11,0.12); color: #fcd34d; }
+
+.mono { font-family: 'JetBrains Mono', monospace; }
+.empty-state { text-align: center; padding: 40px; color: var(--muted); }
+
+/* Live Feed */
+.feed-item { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--surface); border-radius:9px; font-size:13px; border-left:3px solid var(--border); }
+.feed-item.system { border-left-color: var(--muted); opacity:0.7; }
+.feed-time { color:var(--muted); font-size:11px; font-family:"JetBrains Mono",monospace; white-space:nowrap; min-width:70px; }
+.feed-icon { font-size:16px; }
+.feed-main { flex:1; }
+.feed-badge { padding:2px 8px; border-radius:6px; font-size:11px; font-weight:700; white-space:nowrap; }
+.feed-prob { color:var(--muted); font-family:"JetBrains Mono",monospace; font-size:12px; white-space:nowrap; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🛡️</div>
+    <div class="logo-text">Fraud<span>Shield</span></div>
+  </div>
+  <nav class="nav">
+    <button class="nav-item active" onclick="showSection('overview')">
+      <span class="nav-icon">📊</span> Overview
+    </button>
+    <button class="nav-item" onclick="showSection('analyze')">
+      <span class="nav-icon">🔍</span> Analyze Transaction
+    </button>
+    <button class="nav-item" onclick="showSection('live')">
+      <span class="nav-icon">📡</span> Live Feed
+      <span id="liveCount" style="margin-left:auto;background:var(--danger);color:#fff;font-size:11px;padding:2px 7px;border-radius:99px;font-weight:700">0</span>
+    </button>
+    <button class="nav-item" onclick="showSection('history'); loadTxns()">
+      <span class="nav-icon">📋</span> Transaction History
+    </button>
+  </nav>
+  <div class="sidebar-user">
+    <div class="user-info">
+      <div class="user-avatar" id="userAvatar">?</div>
+      <div>
+        <div class="user-name" id="userName">Loading...</div>
+        <div class="user-email" id="userEmail"></div>
+      </div>
+      <button class="logout-btn" onclick="logout()" title="Logout">⬡</button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="pageTitle">Overview</div>
+      <div class="topbar-sub" id="pageDate"></div>
+    </div>
+    <button class="refresh-btn" onclick="loadStats()">↻ Refresh</button>
+  </div>
+
+  <div class="content">
+
+    <!-- Overview Section -->
+    <div class="section active" id="section-overview">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Transactions</div>
+          <div class="stat-value blue mono" id="statTotal">—</div>
+          <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Fraud Detected</div>
+          <div class="stat-value red mono" id="statFraud">—</div>
+          <div class="stat-sub" id="statFraudPct">—% fraud rate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Safe Transactions</div>
+          <div class="stat-value green mono" id="statSafe">—</div>
+          <div class="stat-sub">Verified clean</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Volume</div>
+          <div class="stat-value amber mono" id="statAmount">—</div>
+          <div class="stat-sub">Rupees</div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Transaction Status</div>
+              <div class="card-sub">Distribution</div>
+            </div>
+          </div>
+          <canvas id="donutChart" height="200"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">7-Day Trend</div>
+              <div class="card-sub">Transactions per day</div>
+            </div>
+          </div>
+          <canvas id="trendChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analyze Section -->
+    <div class="section" id="section-analyze">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🔍 Analyze Transaction</div>
+            <div class="card-sub">Submit transaction details for fraud analysis</div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Amount (₹)</label>
+            <input type="number" id="txAmount" placeholder="e.g. 5000" min="1">
+          </div>
+          <div class="field">
+            <label>Location</label>
+            <select id="txLocation">
+              <option value="Local">Local</option>
+              <option value="Domestic">Domestic</option>
+              <option value="Foreign">Foreign</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Merchant Category</label>
+            <select id="txMerchant">
+              <option value="Grocery">Grocery</option>
+              <option value="Restaurant">Restaurant</option>
+              <option value="Shopping">Shopping</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Travel">Travel</option>
+              <option value="Crypto">Crypto</option>
+              <option value="Unknown">Unknown</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Transaction Type</label>
+            <select id="txType">
+              <option value="Purchase">Purchase</option>
+              <option value="Transfer">Transfer</option>
+              <option value="Withdrawal">Withdrawal</option>
+              <option value="Payment">Payment</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Hour of Day (0–23)</label>
+            <input type="number" id="txHour" placeholder="e.g. 14" min="0" max="23">
+          </div>
+          <div class="field">
+            <label>New Device?</label>
+            <select id="txDevice">
+              <option value="0">No — Known device</option>
+              <option value="1">Yes — New/Unknown device</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Transactions Today</label>
+            <input type="number" id="txCount" placeholder="e.g. 3" min="1" value="1">
+          </div>
+        </div>
+        <div style="margin-top:20px; display:flex; gap:12px; align-items:center">
+          <button class="analyze-btn" id="analyzeBtn" onclick="analyzeTransaction()">
+            Analyze Transaction
+          </button>
+          <span id="analyzeStatus" style="color:var(--muted);font-size:13px"></span>
+        </div>
+
+        <div class="result-box" id="resultBox">
+          <div class="result-title" id="resultTitle"></div>
+          <div class="result-grid">
+            <div class="result-item">
+              <div class="label">Fraud Probability</div>
+              <div class="value" id="rProb">—</div>
+            </div>
+            <div class="result-item">
+              <div class="label">Risk Level</div>
+              <div class="value" id="rRisk">—</div>
+            </div>
+            <div class="result-item">
+              <div class="label">Status</div>
+              <div class="value" id="rStatus">—</div>
+            </div>
+          </div>
+          <div class="risk-bar"><div class="risk-fill" id="rFill"></div></div>
+          <div class="risk-labels"><span>Low Risk (0%)</span><span>High Risk (100%)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+    <div class="stat-label">Blocked Transactions</div>
+    <div class="stat-value red mono" id="statBlocked">0</div>
+    <div class="stat-sub">High-risk transactions blocked</div>
+    </div>
+    <div id="fraudReasons"
+     style="margin-top:15px;color:#cbd5e1;font-size:14px;">
+    </div>
+    <!-- History Section -->
+    <div class="section" id="section-history">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📋 Transaction History</div>
+            <div class="card-sub">Recent transactions and fraud analysis results</div>
+          </div>
+        </div>
+        <div id="txnTableWrap">
+          <div class="empty-state">Loading transactions...</div>
+        </div>
+        
+      </div>
+    </div>
+
+    <!-- ── LIVE FEED SECTION ─────────────────────────────── -->
+    <div class="section" id="section-live">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📡 Real-Time Transaction Feed</div>
+            <div class="card-sub">Live stream of all incoming transactions</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="wsDot" style="width:10px;height:10px;border-radius:50%;background:var(--muted);display:inline-block"></span>
+            <span id="wsLabel" style="font-size:13px;color:var(--muted)">Connecting…</span>
+          </div>
+        </div>
+        <div id="liveFeed" style="max-height:520px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px">
+          <div class="empty-state" style="text-align:center;padding:60px 0;color:var(--muted)">
+            Waiting for live transactions…<br>
+            <small>Submit a transaction from Analyze to see it here instantly.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+const token = localStorage.getItem('access_token');
+const user = JSON.parse(localStorage.getItem('user') || '{}');
+if (!token) window.location.href = '/login';
+
+// Set user info
+document.getElementById('userName').textContent = user.username || 'User';
+document.getElementById('userEmail').textContent = user.email || '';
+document.getElementById('userAvatar').textContent = (user.username || 'U')[0].toUpperCase();
+document.getElementById('pageDate').textContent = new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+let donutChart, trendChart;
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  const titles = { overview: 'Overview', analyze: 'Analyze Transaction', history: 'Transaction History', live: '📡 Live Feed' };
+  document.getElementById('pageTitle').textContent = titles[name] || name;
+}
+
+async function apiFetch(url, opts = {}) {
+  return fetch(url, { ...opts, headers: { ...(opts.headers||{}), Authorization: 'Bearer '+token, 'Content-Type':'application/json' } });
+}
+
+async function loadStats() {
+  try {
+    const res = await apiFetch('/api/dashboard/stats');
+    if (res.status === 401) { logout(); return; }
+    const d = await res.json();
+    document.getElementById('statTotal').textContent = d.total_transactions;
+    document.getElementById('statFraud').textContent = d.fraud_transactions;
+    document.getElementById('statFraudPct').textContent = d.fraud_percentage + '% fraud rate';
+    document.getElementById('statSafe').textContent = d.safe_transactions;
+    document.getElementById('statAmount').textContent = '₹' + d.total_amount.toLocaleString('en-IN');
+    drawDonut(d);
+    drawTrend(d.trend || []);
+  } catch(e) { console.error(e); }
+}
+
+function drawDonut(d) {
+  const ctx = document.getElementById('donutChart');
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Safe', 'Fraud', 'Review'],
+      datasets: [{ data: [d.safe_transactions, d.fraud_transactions, d.review_transactions],
+        backgroundColor: ['#10b981','#ef4444','#f59e0b'],
+        borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      cutout: '72%', plugins: { legend: { labels: { color: '#94a3b8', font: { family:'Space Grotesk' } } } },
+      animation: { animateRotate: true, duration: 800 }
+    }
+  });
+}
+
+function drawTrend(trend) {
+  const ctx = document.getElementById('trendChart');
+  if (trendChart) trendChart.destroy();
+  const reversed = [...trend].reverse();
+  trendChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: reversed.map(r => r.day),
+      datasets: [
+        { label: 'Total', data: reversed.map(r=>r.total), backgroundColor: 'rgba(59,130,246,0.5)', borderRadius: 4 },
+        { label: 'Fraud', data: reversed.map(r=>r.frauds), backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 4 }
+      ]
+    },
+    options: {
+      plugins: { legend: { labels: { color:'#94a3b8', font:{ family:'Space Grotesk' } } } },
+      scales: {
+        x: { ticks:{color:'#64748b'}, grid:{color:'rgba(255,255,255,0.04)'} },
+        y: { ticks:{color:'#64748b'}, grid:{color:'rgba(255,255,255,0.04)'} }
+      }
+    }
+  });
+}
+
+async function analyzeTransaction() {
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  if (!amount || amount <= 0) return alert('Enter a valid amount');
+  const hour = parseInt(document.getElementById('txHour').value) || new Date().getHours();
+
+  const btn = document.getElementById('analyzeBtn');
+  const status = document.getElementById('analyzeStatus');
+  btn.disabled = true; btn.textContent = 'Analyzing...';
+  status.textContent = '⏳ Running fraud detection model...';
+
+  try {
+    const res = await apiFetch('/api/transactions/analyze', {
+      method: 'POST',
+      body: JSON.stringify({
+        amount,
+        location: document.getElementById('txLocation').value,
+        merchant: document.getElementById('txMerchant').value,
+        transaction_type: document.getElementById('txType').value,
+        hour,
+        is_new_device: parseInt(document.getElementById('txDevice').value),
+        transactions_today: parseInt(document.getElementById('txCount').value) || 1,
+      })
+    });
+    const d = await res.json();
+    if (!res.ok) { status.textContent = '❌ ' + (d.detail || 'Error'); return; }
+    const cls =
+    d.status === 'BLOCKED'
+        ? 'fraud'
+        : d.status === 'REVIEW'
+        ? 'review'
+        : 'safe';
+    const box = document.getElementById('resultBox');
+    const pct = d.fraud_probability;
+   
+    box.className = 'result-box ' + cls;
+    box.style.display = 'block';
+
+    const icons = {
+    BLOCKED: '🚨',
+    REVIEW: '⚠️',
+    APPROVED: '✅'
+};
+    document.getElementById('resultTitle').textContent = icons[d.status] + ' ' + d.message;
+    document.getElementById('rProb').textContent = pct.toFixed(1) + '%';
+    document.getElementById('rRisk').textContent = d.risk_level;
+    document.getElementById('rStatus').textContent = d.status;
+    const reasonsBox = document.getElementById('fraudReasons');
+
+if (reasonsBox) {
+    reasonsBox.innerHTML =
+        d.reasons && d.reasons.length
+            ? `
+            <b>Fraud Indicators:</b>
+            <ul style="margin-top:8px;padding-left:20px">
+                ${d.reasons.map(r => `<li>${r}</li>`).join('')}
+            </ul>
+            `
+            : 'No suspicious indicators detected.';
+}
+
+
+const colors = {
+    APPROVED: '#10b981',
+    REVIEW: '#f59e0b',
+    BLOCKED: '#ef4444'
+};
+    document.getElementById('rFill').style.cssText = `width:${pct}%;background:${colors[d.status]}`;
+
+    status.textContent = '✅ Analysis complete';
+    loadStats();
+  } catch(e) {
+    status.textContent = '❌ Network error';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Analyze Transaction';
+  }
+}
+
+async function loadTxns() {
+  const wrap = document.getElementById('txnTableWrap');
+  try {
+    const res = await apiFetch('/api/transactions?limit=50');
+    const d = await res.json();
+    if (!d.transactions || d.transactions.length === 0) {
+      wrap.innerHTML = '<div class="empty-state">No transactions yet. <a href="#" onclick="showSection(\'analyze\')">Analyze your first one →</a></div>';
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="txn-table">
+        <thead><tr>
+          <th>#</th><th>Amount</th><th>Location</th><th>Merchant</th>
+          <th>Type</th><th>Risk</th><th>Status</th><th>Reason</th><th>Fraud %</th><th>Date</th>
+        </tr></thead>
+        <tbody>${d.transactions.map(t => `
+          <tr>
+            <td class="mono" style="color:var(--muted)">#${t.id}</td>
+            <td class="mono">₹${t.amount.toLocaleString('en-IN')}</td>
+            <td>${t.location}</td>
+            <td>${t.merchant}</td>
+            <td>${t.transaction_type}</td>
+            <td>${t.risk_level}</td>
+            <td>
+  <span class="badge ${
+      t.status === 'BLOCKED'
+          ? 'fraud'
+          : t.status === 'REVIEW'
+          ? 'review'
+          : 'safe'
+  }">
+      ${t.status}
+  </span>
+</td>
+
+<td>${t.fraud_reason || '-'}</td>
+
+<td class="mono">${t.fraud_probability.toFixed(1)}%</td>
+            <td style="color:var(--muted);font-size:13px">${t.created_at ? t.created_at.split('T')[0] : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    wrap.innerHTML = '<div class="empty-state">Failed to load transactions</div>';
+  }
+}
+
+function logout() {
+  localStorage.clear();
+  window.location.href = '/login';
+}
+
+loadStats();
+
+// ─── REAL-TIME LIVE FEED ───────────────────────────────────────────────────
+const liveFeed = document.getElementById('liveFeed');
+const liveCount = document.getElementById('liveCount');
+const wsDot = document.getElementById('wsDot');
+const wsLabel = document.getElementById('wsLabel');
+let ws = null;
+let reconnectTimer = null;
+let liveEntries = 0;
+
+function connectWS() {
+  const token = localStorage.getItem('access_token');
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const url = `${proto}://${location.host}/ws/dashboard${token ? '?token=' + token : ''}`;
+
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    clearTimeout(reconnectTimer);
+    wsDot.style.background = 'var(--success)';
+    wsLabel.textContent = 'Live';
+    appendFeedEntry({ type: 'system', data: { message: '🔌 Connected to live feed' } });
+    // keep-alive ping every 25s
+    setInterval(() => { if (ws.readyState === 1) ws.send('ping'); }, 25000);
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const event = JSON.parse(e.data);
+      appendFeedEntry(event);
+      // If it's a transaction event, refresh the stats & table silently
+      if (event.type === 'transaction') {
+        loadStats();
+        const txnSection = document.getElementById('section-transactions');
+        if (txnSection && txnSection.classList.contains('active')) loadTxns();
+        // bump counter
+        liveEntries++;
+        liveCount.textContent = liveEntries;
+      }
+    } catch {}
+  };
+
+  ws.onclose = () => {
+    wsDot.style.background = 'var(--danger)';
+    wsLabel.textContent = 'Reconnecting…';
+    reconnectTimer = setTimeout(connectWS, 4000);
+  };
+
+  ws.onerror = () => ws.close();
+}
+
+function appendFeedEntry(event) {
+  if (!liveFeed) return;
+  const d = event.data || {};
+  const ts = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+
+  let html = '';
+  if (event.type === 'transaction') {
+    const statusColor = d.status === 'BLOCKED' ? 'var(--danger)'
+                      : d.status === 'REVIEW'   ? 'var(--warn)'
+                      :                           'var(--success)';
+    const icon = d.status === 'BLOCKED' ? '🚨' : d.status === 'REVIEW' ? '⚠️' : '✅';
+    html = `
+      <div class="feed-item" style="border-left:3px solid ${statusColor}">
+        <span class="feed-time">${ts}</span>
+        <span class="feed-icon">${icon}</span>
+        <span class="feed-main"><b>${d.merchant || 'Unknown'}</b> — ₹${(d.amount||0).toLocaleString('en-IN')}</span>
+        <span class="feed-badge" style="background:${statusColor}20;color:${statusColor}">${d.status}</span>
+        <span class="feed-prob">${(d.fraud_probability||0).toFixed(1)}%</span>
+      </div>`;
+  } else if (event.type === 'system' || event.type === 'connected' || event.type === 'pong') {
+    html = `<div class="feed-item system"><span class="feed-time">${ts}</span><span class="feed-main" style="color:var(--muted)">${d.message || 'System event'}</span></div>`;
+  }
+
+  if (html) {
+    liveFeed.insertAdjacentHTML('afterbegin', html);
+    // Keep only last 50 entries
+    while (liveFeed.children.length > 50) liveFeed.removeChild(liveFeed.lastChild);
+  }
+}
+
+connectWS();
+</script>
+</body>
+</html>
