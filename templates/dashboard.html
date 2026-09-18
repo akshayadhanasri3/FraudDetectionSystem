@@ -632,7 +632,7 @@ function connectWS() {
       // If it's a transaction event, refresh the stats & table silently
       if (event.type === 'transaction') {
         loadStats();
-        const txnSection = document.getElementById('section-transactions');
+        const txnSection = document.getElementById('section-history');
         if (txnSection && txnSection.classList.contains('active')) loadTxns();
         // bump counter
         liveEntries++;
